@@ -17,10 +17,10 @@ export default async function ProductPage() {
               className="block rounded-lg border border-black/8 px-5 py-4 transition-colors hover:bg-black/3 dark:border-white/14 dark:hover:bg-white/5"
             >
               <p className="font-medium text-black dark:text-zinc-50">
-                {p.name}-좋아요 {p.likes}
+                {p.name}
               </p>
               <p className="text-sm text-zinc-500 dark:text-zimc-400">
-                {p.description}
+                {p.description}-좋아요 {p.likes}
               </p>
             </Link>
           </li>
