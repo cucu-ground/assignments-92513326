@@ -8,9 +8,7 @@ export default function AboutPage() {
       </h1>
       <p className="max-w-md text-base leading-7 text-zinc-600 dark:text-zinc-400">
         app 폴더 아래에 새 폴더를 만들고 그 안에 page.tsx를 두면, 폴더 이름이
-        그대로 경로가 됩니다. app/about → /about, app/products/[id] →
-        /products/123 처럼 동적 경로도 같은 방식입니다. (동적 라우팅은 4주차에서
-        다룹니다.)
+        그대로 경로가 됩니다.
       </p>
       <Link
         href="/"

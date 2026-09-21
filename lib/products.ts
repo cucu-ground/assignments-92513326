@@ -27,3 +27,11 @@ export async function getProduct(id: string): Promise<Product | undefined> {
   await delay(700);
   return products.find((p) => p.id == id);
 }
+
+export async function likeProduct(id: string): Promise<number> {
+  await delay(300);
+  const product = products.find((p) => p.id === id);
+  if (!product) return 0;
+  product.likes += 1;
+  return product.likes;
+}
