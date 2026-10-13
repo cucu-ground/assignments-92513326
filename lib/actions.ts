@@ -2,8 +2,11 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { AuthError } from 'next-auth';
 import { likeProduct as likeProductInDb } from '@/lib/products';
 import { createNotice } from '@/lib/notices';
+import { createUser } from '@/lib/users';
+import { signIn, signOut } from '@/auth';
 
 export async function likeProductAction(id: string) {
   const newLikes = await likeProductInDb(id);
@@ -23,4 +26,37 @@ export async function createNoticeAction(formData: FormData) {
   const notice = await createNotice({ title, author, content });
   revalidatePath('/notices');
   redirect(`/notices/${notice.id}`);
+}
+
+export async function registerAction(formData: FormData) {
+  const name = String(formData.get('name') ?? '').trim();
+  const email = String(formData.get('email') ?? '')
+    .trim()
+    .toLowerCase();
+  const password = String(formData.get('password') ?? '');
+
+  if (!name || !email || !password) {
+    throw new Error('이름, 이메일, 비밀번호를 모두 입력해주세요.');
+  }
+  if (password.length < 8) {
+    throw new Error('비밀번호는 8자 이상이어야 합니다.');
+  }
+
+  await createUser({ name, email, password });
+  await signIn('credentials', { email, password, redirectTo: '/' });
+}
+
+export async function loginAction(formData: FormData) {
+  try {
+    await signIn('credentials', formData);
+  } catch (error) {
+    if (error instanceof AuthError) {
+      redirect('/login?error=1');
+    }
+    throw error;
+  }
+}
+
+export async function logoutAction() {
+  await signOut({ redirectTo: '/' });
 }
