@@ -6,6 +6,7 @@ export type Notice = {
   title: string;
   author: string;
   content: string;
+  views: number;
   createdAt: string;
 };
 
@@ -14,6 +15,7 @@ type NoticeDocLike = {
   title: string;
   author: string;
   content: string;
+  views?: number;
   createdAt?: Date;
 };
 
@@ -23,6 +25,7 @@ function toNotice(doc: NoticeDocLike): Notice {
     title: doc.title,
     author: doc.author,
     content: doc.content,
+    views: doc.views ?? 0,
     createdAt: (doc.createdAt ?? new Date()).toISOString().slice(0, 10),
   };
 }
@@ -36,16 +39,19 @@ async function seedIfEmpty() {
       title: '사과는 맛있어',
       author: '이효정',
       content: '원숭이 엉덩이는 빨게. 빨가면 사과, 사과는 맛있어',
+      views: 0,
     },
     {
       title: 'test',
       author: '이효정',
       content: 'test',
+      views: 0,
     },
     {
       title: '안녕하세요',
       author: '이효정',
       content: '안녕하세요',
+      views: 0,
     },
   ]);
 }
@@ -92,7 +98,11 @@ export async function getNotices(): Promise<Notice[]> {
 export async function getNotice(id: string): Promise<Notice | undefined> {
   await connectDB();
   try {
-    const doc = await NoticeModel.findById(id).lean();
+    const doc = await NoticeModel.findByIdAndUpdate(
+      id,
+      { $inc: { views: 1 } },
+      { returnDocument: 'after' },
+    ).lean();
     return doc ? toNotice(doc as NoticeDocLike) : undefined;
   } catch {
     return undefined;
@@ -105,7 +115,7 @@ export async function createNotice(input: {
   content: string;
 }): Promise<Notice> {
   await connectDB();
-  const doc = await NoticeModel.create(input);
+  const doc = await NoticeModel.create({ ...input, views: 0 });
   return toNotice(doc);
 }
 
