@@ -5,6 +5,13 @@ import { connectDB } from '@/lib/mongodb';
 import { User } from '@/models/User';
 import { authConfig } from './auth.config';
 
+// Auth.js(NextAuth) v5 설정 파일입니다. 관례상 프로젝트 루트에 둡니다.
+//
+// auth.config.ts의 "가벼운" 설정에, 실제 로그인 로직(Credentials Provider)과
+// role을 세션에 옮겨 담는 콜백을 더한 "완전한" 버전입니다. 이 파일은
+// Server Component / Server Action / Route Handler처럼 Node.js 런타임에서
+// 실행되는 곳에서만 import합니다 — 미들웨어(Edge Runtime)에서는 이 파일이
+// 아니라 auth.config.ts를 직접 씁니다 (proxy.ts 참고).
 type UserDocLike = {
   _id: unknown;
   name: string;
@@ -38,9 +45,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }).lean<UserDocLike>();
         if (!user) return null; // 존재하지 않는 이메일
 
+        // bcrypt.compare: 입력한 비밀번호를 다시 해싱해서 저장된 해시와 비교합니다.
         const isValid = await bcrypt.compare(password, user.passwordHash);
         if (!isValid) return null; // 비밀번호 불일치
 
+        // 여기서 반환하는 값이 세션(JWT)에 담깁니다 — passwordHash는 절대 포함하지 않습니다.
         return {
           id: String(user._id),
           name: user.name,
@@ -53,8 +62,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: {
     strategy: 'jwt',
   },
+  // 🚨 [12주차 · 취약 버전] "로컬에서 테스트할 때 매번 AUTH_SECRET
+  // 만들기 귀찮아서" 폴백 값을 넣어뒀습니다. 문제는 이 폴백이 코드에
+  // 그대로 커밋된다는 것 — GitHub에 올라가는 순간 전 세계 누구나 이
+  // 문자열을 압니다. AUTH_SECRET은 로그인 세션(JWT)에 서명하는 키이므로,
+  // 이 값을 아는 사람은 누구든 "나는 admin입니다"라고 서명된 세션
+  // 쿠키를 직접 만들어 로그인 없이 관리자 권한을 얻을 수 있습니다.
+  // 13주차에 이 폴백을 제거하고, .env.local이 없으면 아예 서버가 뜨지
+  // 않도록(fail fast) 고칩니다.
+  secret: process.env.AUTH_SECRET || 'dev-secret-please-change-me',
   callbacks: {
     ...authConfig.callbacks,
+    // authorize()가 반환한 user는 로그인하는 그 순간에만 존재합니다.
+    // 그 정보를 jwt 토큰에 옮겨 담아둬야 이후 모든 요청에서 재사용됩니다.
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
@@ -62,6 +82,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return token;
     },
+    // 토큰의 내용을 실제로 화면 코드가 쓰는 session.user에 옮겨 담습니다.
     async session({ session, token }) {
       if (session.user) {
         session.user.id = String(token.id);
